@@ -59,3 +59,7 @@ func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
 	}
         return obj, nil
 }
+
+func BPFObjectClose(bpfObject *C.struct_bpf_object) {
+	C.bpf_object__close(bpfObject)
+}
