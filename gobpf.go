@@ -28,7 +28,7 @@ import "C"
 
 import (
 	"fmt"
-//	"net"
+	"net"
 //	"path/filepath"
 //	"sync"
 	"syscall"
@@ -62,4 +62,35 @@ func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
 
 func BPFObjectClose(bpfObject *C.struct_bpf_object) {
 	C.bpf_object__close(bpfObject)
+}
+
+func BPFObjectLoad(bpfObject *C.struct_bpf_object) error {
+	ret := C.bpf_object__load(bpfObject)
+	if ret != 0 {
+		return fmt.Errorf("failed to load BPF object")
+	}
+
+	return nil
+}
+
+func GetProgramByName(progName string, bpfObject *C.struct_bpf_object) (*C.struct_bpf_program, error) {
+	progNameStr := C.CString(progName)
+	prog, errC := C.bpf_object__find_program_by_name(bpfObject, progNameStr)
+	C.free(unsafe.Pointer(progNameStr))
+	if prog == nil {
+		return nil, fmt.Errorf("failed to find BPF program %s: %w", progName, errC)
+	}
+        return prog, nil
+}
+
+func AttachXDP(deviceName string, prog *C.struct_bpf_program) (error) {
+	iface, err := net.InterfaceByName(deviceName)
+	if err != nil {
+		return fmt.Errorf("failed to find device by name %s: %w", deviceName, err)
+	}
+	link := C.bpf_program__attach_xdp(prog, C.int(iface.Index))
+	if C.IS_ERR_OR_NULL(unsafe.Pointer(link)) {
+		return errptrError(unsafe.Pointer(link), "failed to attach xdp on device %s", deviceName)
+	}
+	return nil
 }
