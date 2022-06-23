@@ -28,7 +28,9 @@ int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 {
     //if (level != LIBBPF_WARN)
     //    return 0;
-	
+        FILE *fp;
+
+   	fp = fopen("/var/log/aws-routed-eni/file.txt","w");	
 	va_list check; va_copy(check, args);
 	char *str = va_arg(check, char *);
 	if (strstr(str, "Exclusivity flag on") != NULL) {
@@ -36,6 +38,8 @@ int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 		return 0;
 	}
 	va_end(check);
+    vfprintf(fp, format, args);
+    fclose(fp);
     return vfprintf(stderr, format, args);
 }
 
