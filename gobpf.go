@@ -23,6 +23,26 @@ static inline long PTR_ERR(const void *ptr)
     return (long) ptr;
 }
 
+int libbpf_print_fn(enum libbpf_print_level level, const char *format,
+                    va_list args)
+{
+    //if (level != LIBBPF_WARN)
+    //    return 0;
+	
+	va_list check; va_copy(check, args);
+	char *str = va_arg(check, char *);
+	if (strstr(str, "Exclusivity flag on") != NULL) {
+		va_end(check);
+		return 0;
+	}
+	va_end(check);
+    return vfprintf(stderr, format, args);
+}
+
+void set_print_fn() {
+    libbpf_set_print(libbpf_print_fn);
+}
+
 */
 import "C"
 
@@ -47,6 +67,8 @@ func errptrError(ptr unsafe.Pointer, format string, args ...interface{}) error {
 }
 
 func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
+
+	C.set_print_fn()
 
 	opts := C.struct_bpf_object_open_opts{}
 	opts.sz = C.sizeof_struct_bpf_object_open_opts
