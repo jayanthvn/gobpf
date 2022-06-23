@@ -43,6 +43,9 @@ void set_print_fn() {
     libbpf_set_print(libbpf_print_fn);
 }
 
+long libbpf_error(const void *ptr) {
+	return libbpf_get_error(ptr);
+}
 */
 import "C"
 
@@ -77,6 +80,10 @@ func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
 	defer C.free(unsafe.Pointer(bpfFile))
 
 	obj := C.bpf_object__open_file(bpfFile, &opts)
+	err := C.libbpf_error(unsafe.Pointer(obj))
+        if (err != 0) {
+		return nil, errptrError(unsafe.Pointer(obj), "LIBPF returned error %d", err) 
+	}
 	if C.IS_ERR_OR_NULL(unsafe.Pointer(obj)) {
 		return nil, errptrError(unsafe.Pointer(obj), "failed to open BPF object %s", filePath)
 	}
