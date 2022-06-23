@@ -26,18 +26,8 @@ static inline long PTR_ERR(const void *ptr)
 int libbpf_print_fn(enum libbpf_print_level level, const char *format,
                     va_list args)
 {
-    //if (level != LIBBPF_WARN)
-    //    return 0;
-        FILE *fp;
-
-   	fp = fopen("/var/log/aws-routed-eni/file.txt","w");	
-	va_list check; va_copy(check, args);
-	char *str = va_arg(check, char *);
-	if (strstr(str, "Exclusivity flag on") != NULL) {
-		va_end(check);
-		return 0;
-	}
-	va_end(check);
+    FILE *fp;
+    fp = fopen("/var/log/aws-routed-eni/file.txt","a+");	
     vfprintf(fp, format, args);
     fclose(fp);
     return vfprintf(stderr, format, args);
