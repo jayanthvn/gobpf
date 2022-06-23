@@ -49,6 +49,7 @@ func errptrError(ptr unsafe.Pointer, format string, args ...interface{}) error {
 func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
 
 	opts := C.struct_bpf_object_open_opts{}
+	opts.sz = C.sizeof_struct_bpf_object_open_opts
 
 	bpfFile := C.CString(filePath)
 	defer C.free(unsafe.Pointer(bpfFile))
