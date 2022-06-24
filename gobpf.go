@@ -1,4 +1,5 @@
 package gobpf
+
 /*
 #cgo LDFLAGS: -lelf -lz
 
@@ -40,6 +41,10 @@ void set_print_fn() {
 long libbpf_error(const void *ptr) {
 	return libbpf_get_error(ptr);
 }
+
+struct bpf_object *bpf_object_open_file(const char *path, const struct bpf_object_open_opts *opts) {
+	return bpf_object__open_file(path, opts);
+}
 */
 import "C"
 
@@ -63,16 +68,38 @@ func errptrError(ptr unsafe.Pointer, format string, args ...interface{}) error {
 	return fmt.Errorf(format+": %v", args...)
 }
 
-func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
+// BPF is using locked memory for BPF maps and various other things.
+// By default, this limit is very low - increase to avoid failures
+func bumpMemlockRlimit() error {
+	var rLimit syscall.Rlimit
+	rLimit.Max = 512 << 20 /* 512 MBs */
+	rLimit.Cur = 512 << 20 /* 512 MBs */
+	err := syscall.Setrlimit(C.RLIMIT_MEMLOCK, &rLimit)
+	if err != nil {
+		return fmt.Errorf("error setting rlimit: %v", err)
+	}
+	return nil
+}
+
+type BPFObject struct {
+	obj      *C.struct_bpf_object
+}
+
+func BPFObjectOpenFile(filePath string) (*BPFObject, error){
 
 	C.set_print_fn()
-
+	if err := bumpMemlockRlimit(); err != nil {
+		return nil, err
+	}
 	opts := C.struct_bpf_object_open_opts{}
 	opts.sz = C.sizeof_struct_bpf_object_open_opts
 
 	bpfFile := C.CString(filePath)
 	defer C.free(unsafe.Pointer(bpfFile))
 
+	if C.IS_ERR_OR_NULL(unsafe.Pointer(bpfFile)) {
+		return nil, errptrError(unsafe.Pointer(bpfFile), "NULL pointer %s", filePath)
+	}
 	obj := C.bpf_object__open_file(bpfFile, &opts)
 	err := C.libbpf_error(unsafe.Pointer(obj))
         if (err != 0) {
@@ -81,11 +108,13 @@ func BPFObjectOpenFile(filePath string) (*C.struct_bpf_object, error){
 	if C.IS_ERR_OR_NULL(unsafe.Pointer(obj)) {
 		return nil, errptrError(unsafe.Pointer(obj), "failed to open BPF object %s", filePath)
 	}
-        return obj, nil
+        return &BPFObject{ 
+		obj: obj, 
+	}, nil
 }
 
-func BPFObjectClose(bpfObject *C.struct_bpf_object) {
-	C.bpf_object__close(bpfObject)
+func BPFObjectClose(bpfObject *BPFObject) {
+	C.bpf_object__close(bpfObject.obj)
 }
 
 func BPFObjectLoad(bpfObject *C.struct_bpf_object) error {

@@ -3,7 +3,6 @@
 BASEDIR = $(abspath ./)
 
 OUTPUT = ./output
-SELFTEST = ./selftest
 
 CC = gcc
 CLANG = clang
