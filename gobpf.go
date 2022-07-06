@@ -59,7 +59,7 @@ import (
 	"unsafe"
 )
 
-type Module struct {
+type BPFObject struct {
 	obj      *C.struct_bpf_object
 }
 
@@ -85,18 +85,7 @@ func errptrError(ptr unsafe.Pointer, format string, args ...interface{}) error {
 	return fmt.Errorf(format+": %v", args...)
 }
 
-type NewModuleArgs struct {
-	BPFObjPath      string
-}
-
-func NewModuleFromFile(bpfObjPath string) (*Module, error) {
-
-	return NewModuleFromFileArgs(NewModuleArgs{
-		BPFObjPath: bpfObjPath,
-	})
-}
-
-func NewModuleFromFileArgs(args NewModuleArgs) (*Module, error) {
+func NewBPFObject(bpfObjPath string) (*BPFObject, error) {
 	C.set_print_fn()
 	if err := bumpMemlockRlimit(); err != nil {
 		return nil, err
@@ -104,25 +93,25 @@ func NewModuleFromFileArgs(args NewModuleArgs) (*Module, error) {
 	opts := C.struct_bpf_object_open_opts{}
 	opts.sz = C.sizeof_struct_bpf_object_open_opts
 
-	bpfFile := C.CString(args.BPFObjPath)
+	bpfFile := C.CString(bpfObjPath)
 	defer C.free(unsafe.Pointer(bpfFile))
 
 	obj := C.bpf_object__open_file(bpfFile, &opts)
 	if C.IS_ERR_OR_NULL(unsafe.Pointer(obj)) {
-		return nil, errptrError(unsafe.Pointer(obj), "failed to open BPF object %s", args.BPFObjPath)
+		return nil, errptrError(unsafe.Pointer(obj), "failed to open BPF object %s", bpfObjPath)
 	}
 
-	return &Module{
+	return &BPFObject{
 		obj: obj,
 	}, nil
 }
 
 
-func (m *Module) Close() {
+func (m *BPFObject) Close() {
 	C.bpf_object__close(m.obj)
 }
 
-func (m *Module) BPFLoadObject() error {
+func (m *BPFObject) BPFLoadObject() error {
 	ret := C.bpf_object__load(m.obj)
 	if ret != 0 {
 		return fmt.Errorf("failed to load BPF object")
