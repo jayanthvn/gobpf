@@ -55,12 +55,17 @@ import "C"
 
 import (
 	"fmt"
+	"net"
 	"syscall"
 	"unsafe"
 )
 
 type BPFObject struct {
 	obj      *C.struct_bpf_object
+}
+
+type BPFProgram struct {
+	prog     *C.struct_bpf_program
 }
 
 func bumpMemlockRlimit() error {
@@ -117,5 +122,29 @@ func (m *BPFObject) BPFLoadObject() error {
 		return fmt.Errorf("failed to load BPF object")
 	}
 
+	return nil
+}
+
+func (m *BPFObject) GetProgramByName(progName string) (*BPFProgram, error) {
+	progNameStr := C.CString(progName)
+	prog, errC := C.bpf_object__find_program_by_name(m.obj, progNameStr)
+	C.free(unsafe.Pointer(progNameStr))
+	if prog == nil {
+		return nil, fmt.Errorf("failed to find BPF program %s: %w", progName, errC)
+	}
+        return &BPFProgram{
+		prog:prog, 
+	}, nil
+}
+
+func (p *BPFProgram)AttachXDP(deviceName string) (error) {
+	iface, err := net.InterfaceByName(deviceName)
+	if err != nil {
+		return fmt.Errorf("failed to find device by name %s: %w", deviceName, err)
+	}
+	link := C.bpf_program__attach_xdp(p.prog, C.int(iface.Index))
+	if C.IS_ERR_OR_NULL(unsafe.Pointer(link)) {
+		return errptrError(unsafe.Pointer(link), "failed to attach xdp on device %s", deviceName)
+	}
 	return nil
 }
