@@ -12,6 +12,7 @@ import (
 	//"github.com/aquasecurity/libbpfgo"
 	//bpf "github.com/aquasecurity/libbpfgo"
 	jaybpf "github.com/jayanthvn/gobpf"
+	_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
 /*
@@ -35,7 +36,7 @@ import (
 
 func main() {
 	
-	_, err := jaybpf.BPFObjectOpenFile("main.bpf.o")
+	_, err := jaybpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)

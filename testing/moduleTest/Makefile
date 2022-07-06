@@ -45,6 +45,10 @@ outputdir:
 
 ## test bpf dependency
 
+.PHONY: build-test
+
+build-test: $(TEST).bpf.o
+       	
 $(TEST).bpf.o: $(TEST).bpf.c
 	$(MAKE) -C $(BASEDIR) vmlinuxh
 	$(CLANG) $(CFLAGS) -target bpf -D__TARGET_ARCH_$(ARCH) -I$(OUTPUT) -c $< -o $@
@@ -53,7 +57,9 @@ $(TEST).bpf.o: $(TEST).bpf.c
 
 .PHONY: $(TEST)-static
 
-$(TEST)-static: libbpfgo-static | $(TEST).bpf.o
+CGO_CFLAGS_STATIC_JAY = "-I/local/home/varavaj/github/aqua_bpf/libbpfgo/output"
+CGO_LDFLAGS_STATIC_JAY = "-lelf -lz /local/home/varavaj/github/aqua_bpf/libbpfgo/output/libbpf.a"
+$(TEST)-static: build-test | libbpfgo-static
 	CC=$(CLANG) \
 		CGO_CFLAGS=$(CGO_CFLAGS_STATIC) \
 		CGO_LDFLAGS=$(CGO_LDFLAGS_STATIC) \

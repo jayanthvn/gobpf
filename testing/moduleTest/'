@@ -36,6 +36,8 @@ int libbpf_print_fn(enum libbpf_print_level level, const char *format,
     if (level != LIBBPF_WARN)
         return 0;
 
+	// BUG: https://github.com/aquasecurity/tracee/issues/1676
+
 	va_list check; va_copy(check, args);
 	char *str = va_arg(check, char *);
 	if (strstr(str, "Exclusivity flag on") != NULL) {
@@ -63,6 +65,15 @@ type Module struct {
 	obj      *C.struct_bpf_object
 }
 
+type BPFProg struct {
+	name       string
+	prog       *C.struct_bpf_program
+	module     *Module
+	pinnedPath string
+}
+
+// BPF is using locked memory for BPF maps and various other things.
+// By default, this limit is very low - increase to avoid failures
 func bumpMemlockRlimit() error {
 	var rLimit syscall.Rlimit
 	rLimit.Max = 512 << 20 /* 512 MBs */
@@ -97,7 +108,6 @@ func NewModuleFromFile(bpfObjPath string) (*Module, error) {
 }
 
 func NewModuleFromFileArgs(args NewModuleArgs) (*Module, error) {
-	C.set_print_fn()
 	if err := bumpMemlockRlimit(); err != nil {
 		return nil, err
 	}
