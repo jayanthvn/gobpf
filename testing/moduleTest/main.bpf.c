@@ -2,10 +2,9 @@
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 
-SEC("kprobe/sys_execve")
-int kprobe__sys_execve(struct pt_regs *ctx)
-{
-    return 0;
+SEC("xdp")
+int target(struct xdp_md *ctx) {
+    return XDP_PASS;
 }
 
-char LICENSE[] SEC("license") = "Dual BSD/GPL";
+char LICENSE[] SEC("license") = "GPL";
