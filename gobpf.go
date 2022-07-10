@@ -29,11 +29,12 @@ static inline long PTR_ERR(const void *ptr)
     return (long) ptr;
 }
 #endif
+#if 0
 int libbpf_print_fn(enum libbpf_print_level level, const char *format,
                     va_list args)
 {
-    //if (level != LIBBPF_WARN)
-    //    return 0;
+    if (level != LIBBPF_WARN)
+        return 0;
 
 	va_list check; va_copy(check, args);
 	char *str = va_arg(check, char *);
@@ -45,17 +46,16 @@ int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 
     return vfprintf(stderr, format, args);
 }
+#endif
 
-int fileOpen(char *filename, char *mode, FILE **fp) {
-      *fp = fopen(filename, mode);
-      if (*fp == NULL)
-              return -1;
-      return 0;
-}
-
-int fileclose(FILE *fp) {
-      fclose(fp);
-      return 0;
+int libbpf_print_fn(enum libbpf_print_level level, const char *format,
+                    va_list args)
+{
+    FILE *fp;
+    fp = fopen("/var/log/aws-routed-eni/file.txt","a+");
+    vfprintf(fp, format, args);
+    fclose(fp);
+    return vfprintf(stderr, format, args);
 }
 
 void set_print_fn() {
@@ -69,14 +69,6 @@ import (
 	"net"
 	"syscall"
 	"unsafe"
-	"os"
-	"bytes"
-	"io"
-	"log"
-)
-
-const (
-	libBpfDebugFile = "/var/log/aws-routed-eni/file.txt"
 )
 
 type BPFObject struct {
@@ -136,50 +128,11 @@ func (m *BPFObject) Close() {
 }
 
 func (m *BPFObject) BPFLoadObject() error {
-
-	// Clone Stdout to origStdout.
-	origStdout, err := syscall.Dup(syscall.Stdout)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Clone the pipe's writer to the actual Stdout descriptor; from this point
-	// on, writes to Stdout will go to w.
-	if err = syscall.Dup2(int(w.Fd()), syscall.Stdout); err != nil {
-		log.Fatal(err)
-	}
-
-	// Background goroutine that drains the reading end of the pipe.
-	out := make(chan []byte)
-	go func() {
-		var b bytes.Buffer
-		io.Copy(&b, r)
-		out <- b.Bytes()
-	}()
-//Above not needed, only for debug
 	ret := C.bpf_object__load(m.obj)
 	if ret != 0 {
 		return fmt.Errorf("failed to load BPF object")
 	}
-//Below only for debug
-        // Cleanup
-	C.fflush(nil)
-	w.Close()
-	syscall.Close(syscall.Stdout)
 
-	// Rendezvous with the reading goroutine.
-	b := <-out
-
-	// Restore original Stdout.
-	syscall.Dup2(origStdout, syscall.Stdout)
-	syscall.Close(origStdout)
-
-	fmt.Println("Captured:", string(b))
 	return nil
 }
 
