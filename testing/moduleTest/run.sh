@@ -3,7 +3,7 @@
 # SETTINGS
 
 TEST=$(dirname $0)/$1	# execute
-TIMEOUT=16			# seconds
+TIMEOUT=6			# seconds
 
 # COMMON
 

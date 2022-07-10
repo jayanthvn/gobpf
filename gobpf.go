@@ -29,7 +29,7 @@ static inline long PTR_ERR(const void *ptr)
     return (long) ptr;
 }
 #endif
-#if 0
+
 int libbpf_print_fn(enum libbpf_print_level level, const char *format,
                     va_list args)
 {
@@ -44,17 +44,6 @@ int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 	}
 	va_end(check);
 
-    return vfprintf(stderr, format, args);
-}
-#endif
-
-int libbpf_print_fn(enum libbpf_print_level level, const char *format,
-                    va_list args)
-{
-    FILE *fp;
-    fp = fopen("/var/log/aws-routed-eni/file.txt","a+");
-    vfprintf(fp, format, args);
-    fclose(fp);
     return vfprintf(stderr, format, args);
 }
 
